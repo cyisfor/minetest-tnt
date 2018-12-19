@@ -107,6 +107,9 @@ local function destroy(drops, npos, cid, c_air, c_fire,
 			pos = vector.new(npos)
 		}
 		return c_fire
+	elseif def.groups and def.groups.level and def.groups.level > 1 then
+		 -- obsidian and other "strong" blocks aren't explodable
+		 return cid
 	else
 		local node_drops = minetest.get_node_drops(def.name, "")
 		for _, item in pairs(node_drops) do
@@ -571,6 +574,21 @@ if enable_tnt then
 		}
 	})
 
+	minetest.register_tool(
+		 "tnt:tnt_burning",
+		 {
+				description = "Burning TNT",
+				tool_capabilities = {
+					 full_punch_interval = 1.3,
+					 max_drop_level=0,
+					 groupcaps={
+							-- capable of busting through stone and many ores
+							cracky = {times={[2]=2.0, [3]=1.00}, uses=20, maxlevel=1},
+					 },
+					 damage_groups = {fleshy=3},
+				},
+		 })
+	
 	minetest.register_abm({
 		label = "TNT ignition",
 		nodenames = {"group:tnt", "tnt:gunpowder"},
