@@ -22,6 +22,7 @@ minetest.after(0, function()
 			name = name,
 			drops = def.drops,
 			flammable = def.groups.flammable,
+			level = def.groups.level or 0,
 			on_blast = def.on_blast,
 		}
 	end
@@ -107,7 +108,7 @@ local function destroy(drops, npos, cid, c_air, c_fire,
 			pos = vector.new(npos)
 		}
 		return c_fire
-	elseif def.groups and def.groups.level and def.groups.level > 1 then
+	elseif def.level > 1 then
 		 -- obsidian and other "strong" blocks aren't explodable
 		 return cid
 	else
