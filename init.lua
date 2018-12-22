@@ -295,7 +295,7 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 	if explode_center then
 		count = 1
 	end
-
+	-- remove other tnt blocks, and increase the severity of the explosion
 	for z = pos.z - 2, pos.z + 2 do
 	for y = pos.y - 2, pos.y + 2 do
 		local vi = a:index(pos.x - 2, y, z)
@@ -331,23 +331,51 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 	basic_flame_on_construct = minetest.registered_nodes["fire:basic_flame"].on_construct
 
 	local c_fire = minetest.get_content_id("fire:basic_flame")
-	for z = -radius, radius do
-	for y = -radius, radius do
-	local vi = a:index(pos.x + (-radius), pos.y + y, pos.z + z)
-	for x = -radius, radius do
-		local r = vector.length(vector.new(x, y, z))
-		if (radius * radius) / (r * r) >= (pr:next(80, 125) / 100) then
-			local cid = data[vi]
-			local p = {x = pos.x + x, y = pos.y + y, z = pos.z + z}
-			if cid ~= c_air then
-				data[vi] = destroy(drops, p, cid, c_air, c_fire,
-					on_blast_queue, on_construct_queue,
-					ignore_protection, ignore_on_blast, owner)
-			end
-		end
-		vi = vi + 1
+	-- start from the center, and recurse outward, losing power as you do
+	-- that allows shielding like obsidian to work
+	local exploded = {}
+	local ignored = {}
+	function explode_from(pos, power)
+		 if not power then return end
+		 for dz = -1, 1 do
+				for dy = -1, 1 do
+					 local vi = a:index(pos.x - 1, pos.y + dy, pos.z + dz)
+					 for dx = -1, 1 do
+							if not (dx == 0 and dy == 0 and dz == 0) and not exploded[vi] and not ignored[vi] then 
+								 local p = {x = pos.x + dx, y = pos.y + dy, z = pos.z + dz}
+								 local cid = data[vi]
+								 if cid == c_air then
+										ignored[vi] = true
+									else
+										 local result = destroy(
+												drops, p, cid, c_air, c_fire,
+												on_blast_queue, on_construct_queue,
+												ignore_protection, ignore_on_blast, owner)
+										 if result == cid then
+												ignored[vi] = true
+												-- no more exploding beyond this
+										 else
+												exploded[vi] = result
+												local newpower = 1
+												if pr:next(0,3) == 0 then
+													 newpower = newpower + 1
+												end
+												explode_from(p, newpower);
+										 end
+
+								 end
+							end
+							-- as dx goes from -1 to 1, vi increments 1 each time
+							-- so no need to a:index again
+							vi = vi + 1
+					 end
+				end
+		 end
 	end
-	end
+	explode_from(pos, radius);
+
+	for vi, cid in pairs(exploded) do
+		 data[vi] = cid
 	end
 
 	vm:set_data(data)
