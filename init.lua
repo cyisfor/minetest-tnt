@@ -282,7 +282,10 @@ function tnt.burn(pos, nodename)
 end
 
 local function PP(p)
-	 return '(' + p.x + ',' + p.y + ',' + p.z + ')'
+	 if not p then
+			return '????'
+	 end
+	 return '(' .. p.x .. ',' .. p.y + ',' .. p.z .. ')'
 end
 
 local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owner, explode_center)
@@ -348,7 +351,11 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 		 local power = rec.power
 		 if (dx == 0 and dy == 0 and dz == 0) then return end
 		 if exploded[vi] or ignored[vi] then return end
-		 local p = rec.pos
+		 local p = {
+				x = rec.pos.x,
+				y = rec.pos.y,
+				z = rec.pos.z
+		 }
 		 if dx then p.x = p.x + dx end
 		 if dy then p.y = p.y + dy end
 		 if dz then p.z = p.z + dz end
@@ -357,7 +364,7 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 				ignored[vi] = true
 				-- keep exploding outward from the air
 				table.insert(tocheck, 1, {pos=p, power=power-1})
-				print(PP(pos),'->',PP(p))
+				print(PP(rec.pos),'->',PP(p))
 		 else
 				local result = destroy(
 					 drops, p, cid, c_air, c_fire,
@@ -383,7 +390,7 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 							end
 							if newpower then
 								 table.insert(tocheck, 1, {pos=p,power=newpower});
-								 print(PP(pos),'=>',PP(p))
+								 print(PP(rec.pos),'=>',PP(p))
 							end
 					 end
 				end
