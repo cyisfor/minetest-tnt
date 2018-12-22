@@ -1,5 +1,7 @@
 tnt = {}
 
+print("MORE BETTER TNT MOD")
+
 -- Default to enabled when in singleplayer
 local enable_tnt = minetest.settings:get_bool("enable_tnt")
 if enable_tnt == nil then
@@ -100,6 +102,7 @@ local function destroy(drops, npos, cid, c_air, c_fire,
 		on_blast_queue[#on_blast_queue + 1] = {
 			pos = vector.new(npos),
 			on_blast = def.on_blast
+			-- TODO: power = ??? have on_blast return power?
 		}
 		-- XXX: on_blast nodes have to do their own exploding!
 		-- they shield the tnt explosion
@@ -337,51 +340,56 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 	-- that allows shielding like obsidian to work
 	local exploded = {}
 	local ignored = {}
-	function explode_from(pos, power)
-		 if not power then return end
-		 for dz = -1, 1 do
-				for dy = -1, 1 do
-					 local vi = a:index(pos.x - 1, pos.y + dy, pos.z + dz)
-					 for dx = -1, 1 do
-							if not (dx == 0 and dy == 0 and dz == 0) and not exploded[vi] and not ignored[vi] then 
-								 local p = {x = pos.x + dx, y = pos.y + dy, z = pos.z + dz}
-								 local cid = data[vi]
-								 if cid == c_air then
-										ignored[vi] = true
-										-- keep exploding outward from the air
-										explode_from(p, power+1);
-									else
-										 local result = destroy(
-												drops, p, cid, c_air, c_fire,
-												on_blast_queue, on_construct_queue,
-												ignore_protection, ignore_on_blast, owner)
-										 if result == false then
-												ignored[vi] = true
-												-- no more exploding beyond any node that doesn't
-										 else
-												exploded[vi] = true
-												data[vi] = result
-												local newpower = 1
-												if pr:next(0,3) == 0 then
-													 newpower = newpower + 1
-												end
-												explode_from(p, newpower);
-										 end
-								 end
+	local tocheck = {{pos=pos,power=radius}}
+	function check(vi, dx)
+		 if (dx == 0 and dy == 0 and dz == 0) then return end
+		 if exploded[vi] or ignored[vi] then return end
+		 local p = {x = pos.x + dx, y = pos.y + dy, z = pos.z + dz}
+		 local cid = data[vi]
+		 if cid == c_air then
+				ignored[vi] = true
+				-- keep exploding outward from the air
+				table.insert(tocheck, 1, {pos=p, power=rec.power-1})
+		 else
+				local result = destroy(
+					 drops, p, cid, c_air, c_fire,
+					 on_blast_queue, on_construct_queue,
+					 ignore_protection, ignore_on_blast, owner)
+				if result == false then
+					 ignored[vi] = true
+					 -- no more exploding beyond any node that doesn't
+				else
+					 exploded[vi] = true
+					 data[vi] = result
+					 local newpower = power - 1
+					 if newpower then
+							if pr:next(0,3) == 0 then
+								 newpower = newpower - 1
 							end
-							-- as dx goes from -1 to 1, vi increments 1 each time
-							-- so no need to a:index again
-							vi = vi + 1
+							if newpower then
+								 table.insert(tocheck, 1, {pos=p,power=newpower});
+							end
 					 end
 				end
 		 end
 	end
-	explode_from(pos, radius);
-
-	for vi, cid in pairs(exploded) do
-		 data[vi] = cid
+	while #tocheck > 0 do
+		 local rec = table.remove(tocheck,1)
+		 if rec.power then 
+				for dz = -1, 1 do
+					 for dy = -1, 1 do
+							local vi = a:index(pos.x - 1, pos.y + dy, pos.z + dz)
+							for dx = -1, 1 do
+								 check(vi,dx)
+								 -- as dx goes from -1 to 1, vi increments 1 each time
+								 -- so no need to a:index again
+								 vi = vi + 1
+							end
+					 end
+				end
+		 end
 	end
-
+	
 	vm:set_data(data)
 	vm:write_to_map()
 	vm:update_map()
