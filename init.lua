@@ -115,7 +115,7 @@ local function destroy(drops, npos, cid, c_air, c_fire,
 		return c_fire
 	elseif def.level > 1 then
 		 -- obsidian and other "strong" blocks aren't explodable
-		 return cid
+		 return false
 	else
 		local node_drops = minetest.get_node_drops(def.name, "")
 		for _, item in pairs(node_drops) do
@@ -341,15 +341,19 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 	local exploded = {}
 	local ignored = {}
 	local tocheck = {{pos=pos,power=radius}}
-	function check(vi, dx)
+	function check(rec, vi, dx, dy, dz)
+		 local power = rec.power
 		 if (dx == 0 and dy == 0 and dz == 0) then return end
 		 if exploded[vi] or ignored[vi] then return end
-		 local p = {x = pos.x + dx, y = pos.y + dy, z = pos.z + dz}
+		 local p = rec.pos
+		 if dx then p.x = p.x + dx end
+		 if dy then p.y = p.y + dy end
+		 if dz then p.z = p.z + dz end
 		 local cid = data[vi]
 		 if cid == c_air then
 				ignored[vi] = true
 				-- keep exploding outward from the air
-				table.insert(tocheck, 1, {pos=p, power=rec.power-1})
+				table.insert(tocheck, 1, {pos=p, power=power-1})
 		 else
 				local result = destroy(
 					 drops, p, cid, c_air, c_fire,
@@ -378,9 +382,9 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 		 if rec.power then 
 				for dz = -1, 1 do
 					 for dy = -1, 1 do
-							local vi = a:index(pos.x - 1, pos.y + dy, pos.z + dz)
+							local vi = a:index(rec.pos.x - 1, rec.pos.y + dy, rec.pos.z + dz)
 							for dx = -1, 1 do
-								 check(vi,dx)
+								 check(rec, vi, dx, dy, dz)
 								 -- as dx goes from -1 to 1, vi increments 1 each time
 								 -- so no need to a:index again
 								 vi = vi + 1
@@ -737,3 +741,4 @@ tnt.register_tnt({
 	description = "TNT",
 	radius = tnt_radius,
 })
+
