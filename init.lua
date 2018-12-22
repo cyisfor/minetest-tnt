@@ -89,7 +89,7 @@ local function destroy(drops, npos, cid, c_air, c_fire,
 		on_blast_queue, on_construct_queue,
 		ignore_protection, ignore_on_blast, owner)
 	if not ignore_protection and minetest.is_protected(npos, owner) then
-		return cid
+		return false
 	end
 
 	local def = cid_data[cid]
@@ -101,7 +101,9 @@ local function destroy(drops, npos, cid, c_air, c_fire,
 			pos = vector.new(npos),
 			on_blast = def.on_blast
 		}
-		return cid
+		-- XXX: on_blast nodes have to do their own exploding!
+		-- they shield the tnt explosion
+		return false
 	elseif def.flammable then
 		on_construct_queue[#on_construct_queue + 1] = {
 			fn = basic_flame_on_construct,
@@ -346,23 +348,25 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 								 local cid = data[vi]
 								 if cid == c_air then
 										ignored[vi] = true
+										-- keep exploding outward from the air
+										explode_from(p, power+1);
 									else
 										 local result = destroy(
 												drops, p, cid, c_air, c_fire,
 												on_blast_queue, on_construct_queue,
 												ignore_protection, ignore_on_blast, owner)
-										 if result == cid then
+										 if result == false then
 												ignored[vi] = true
-												-- no more exploding beyond this
+												-- no more exploding beyond any node that doesn't
 										 else
-												exploded[vi] = result
+												exploded[vi] = true
+												data[vi] = result
 												local newpower = 1
 												if pr:next(0,3) == 0 then
 													 newpower = newpower + 1
 												end
 												explode_from(p, newpower);
 										 end
-
 								 end
 							end
 							-- as dx goes from -1 to 1, vi increments 1 each time
