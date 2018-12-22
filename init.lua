@@ -95,7 +95,6 @@ local function destroy(drops, npos, cid, c_air, c_fire,
 	end
 
 	local def = cid_data[cid]
-
 	if not def then
 		return c_air
 	elseif not ignore_on_blast and def.on_blast then
@@ -282,6 +281,10 @@ function tnt.burn(pos, nodename)
 	end
 end
 
+local function PP(p)
+	 return '(' + p.x + ',' + p.y + ',' + p.z + ')'
+end
+
 local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owner, explode_center)
 	pos = vector.round(pos)
 	-- scan for adjacent TNT nodes first, and enlarge the explosion
@@ -341,7 +344,7 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 	local exploded = {}
 	local ignored = {}
 	local tocheck = {{pos=pos,power=radius}}
-	function check(rec, vi, dx, dy, dz)
+	local function check(rec, vi, dx, dy, dz)
 		 local power = rec.power
 		 if (dx == 0 and dy == 0 and dz == 0) then return end
 		 if exploded[vi] or ignored[vi] then return end
@@ -354,11 +357,19 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 				ignored[vi] = true
 				-- keep exploding outward from the air
 				table.insert(tocheck, 1, {pos=p, power=power-1})
+				print(PP(pos),'->',PP(p))
 		 else
 				local result = destroy(
 					 drops, p, cid, c_air, c_fire,
 					 on_blast_queue, on_construct_queue,
 					 ignore_protection, ignore_on_blast, owner)
+
+				local derp = 'air'
+				if cid_data[cid] then
+					 derp = cid_data[cid].name
+				end
+				print("TNT power",power,PP(p),
+							derp, result)
 				if result == false then
 					 ignored[vi] = true
 					 -- no more exploding beyond any node that doesn't
@@ -372,6 +383,7 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 							end
 							if newpower then
 								 table.insert(tocheck, 1, {pos=p,power=newpower});
+								 print(PP(pos),'=>',PP(p))
 							end
 					 end
 				end
@@ -379,7 +391,7 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 	end
 	while #tocheck > 0 do
 		 local rec = table.remove(tocheck,1)
-		 if rec.power then 
+		 if rec.power then
 				for dz = -1, 1 do
 					 for dy = -1, 1 do
 							local vi = a:index(rec.pos.x - 1, rec.pos.y + dy, rec.pos.z + dz)
