@@ -285,7 +285,7 @@ local function PP(p)
 	 if not p then
 			return '????'
 	 end
-	 return '(' .. p.x .. ',' .. p.y + ',' .. p.z .. ')'
+	 return '(' .. p.x .. ',' .. p.y .. ',' .. p.z .. ')'
 end
 
 local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owner, explode_center)
@@ -384,11 +384,11 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 					 exploded[vi] = true
 					 data[vi] = result
 					 local newpower = power - 1
-					 if newpower then
+					 if newpower > 0 then
 							if pr:next(0,3) == 0 then
 								 newpower = newpower - 1
 							end
-							if newpower then
+							if newpower > 0 then
 								 table.insert(tocheck, 1, {pos=p,power=newpower});
 								 print(PP(rec.pos),'=>',PP(p))
 							end
@@ -398,7 +398,7 @@ local function tnt_explode(pos, radius, ignore_protection, ignore_on_blast, owne
 	end
 	while #tocheck > 0 do
 		 local rec = table.remove(tocheck,1)
-		 if rec.power then
+		 if rec.power > 0 then
 				for dz = -1, 1 do
 					 for dy = -1, 1 do
 							local vi = a:index(rec.pos.x - 1, rec.pos.y + dy, rec.pos.z + dz)
